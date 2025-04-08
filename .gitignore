@@ -1,0 +1,40 @@
+# ==== General build artifacts ====
+**/build*/
+**/dist/
+**/cmake-build*/
+**/out/
+**/Debug/
+**/Release/
+
+# ==== IDE specific ====
+**/.idea/
+**/.vscode/
+**/.vs/
+**/.DS_Store
+**/.project
+**/.classpath
+**/.settings/
+
+# ==== Cython / Python extensions ====
+**/*.so
+**/*.pyd
+**/*.dll
+**/*.dylib
+**/sd_solver.cpp
+
+# ==== Python cache and temp ====
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# ==== Packaging ====
+*.egg-info/
+*.egg
+*.whl
+
+# ==== Setup tools ====
+MANIFEST
+pip-wheel-metadata/
+
+# ==== Python Venv ====
+**/*venv/
