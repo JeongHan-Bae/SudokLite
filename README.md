@@ -144,4 +144,3 @@ Found a bug? Want to add features?
 Open a PR or issue — contributions welcome!
 
 If you're using **SudokLite** in your project, course, or hobby app — I'd love to hear about it! 🧠⚡
-```

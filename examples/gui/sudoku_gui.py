@@ -20,6 +20,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QScrollArea
+
 import sd_solver
 
 class SudokuCell(QLabel):
@@ -72,51 +75,78 @@ class SudokuCell(QLabel):
     def focusOutEvent(self, event):
         self.setStyleSheet("border: 1px solid black;")
         super().focusOutEvent(event)
-
+def make_insert_callback(n):
+    def callback():
+        print(f"[DEBUG] Button {n} clicked")
+        widget = self.focusWidget()
+        if isinstance(widget, SudokuCell):
+            print(f"[DEBUG] Focused cell: ({widget.row}, {widget.col})")
+            widget.setValue(n)
+        else:
+            print("[WARN] No SudokuCell focused!")
+    return callback
 class SudokuApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sudoku · PySide6")
         self.board = [[SudokuCell(r, c) for c in range(9)] for r in range(9)]
         self.init_ui()
+        screen_rect = QApplication.primaryScreen().availableGeometry()
+        self.setMinimumSize(400, 400)
+        self.resize(min(600, screen_rect.width()), min(700, screen_rect.height()))
 
     def init_ui(self):
         main_layout = QVBoxLayout()
-        grid_layout = QGridLayout()
+
+        # ---- Sudoku Grid ----
+        grid_widget = QWidget()
+        grid_layout = QGridLayout(grid_widget)
         for r in range(9):
             for c in range(9):
                 cell = self.board[r][c]
+                cell.setMinimumSize(25, 25)
+                cell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 grid_layout.addWidget(cell, r, c)
 
-        # Virtual keypad
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(grid_widget)
+        scroll_area.setMinimumHeight(300)
+        main_layout.addWidget(scroll_area)
+
+        # ---- Virtual Keypad ----
         keypad_layout = QHBoxLayout()
         for i in range(10):
             btn = QPushButton(str(i))
-            btn.setFixedSize(40, 40)
+            btn.setMinimumSize(25, 25)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             btn.clicked.connect(lambda _, n=i: self.insert_number(n))
+            btn.setFocusPolicy(Qt.NoFocus)
             keypad_layout.addWidget(btn)
+        main_layout.addLayout(keypad_layout)
 
-        # Control buttons
+        # ---- Control Buttons ----
         control_layout = QHBoxLayout()
         solve_btn = QPushButton("Solve")
+        solve_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         solve_btn.clicked.connect(self.solve_puzzle)
+
         clear_btn = QPushButton("Clear")
+        clear_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         clear_btn.clicked.connect(self.clear_board)
+
         control_layout.addWidget(solve_btn)
         control_layout.addWidget(clear_btn)
+        main_layout.addLayout(control_layout)
 
-        # Instruction label
+        # ---- Hint Label ----
         hint_label = QLabel("Press '0' or click [0] to clear a cell.")
         hint_label.setAlignment(Qt.AlignCenter)
         hint_label.setStyleSheet("color: gray; font-size: 12px; margin-top: 6px;")
-
-        main_layout.addLayout(grid_layout)
-        main_layout.addLayout(keypad_layout)
-        main_layout.addLayout(control_layout)
         main_layout.addWidget(hint_label)
+
+        # ---- Apply Layout ----
         self.setLayout(main_layout)
-
-
 
     def insert_number(self, num):
         widget = self.focusWidget()
