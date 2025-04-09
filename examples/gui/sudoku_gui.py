@@ -75,16 +75,7 @@ class SudokuCell(QLabel):
     def focusOutEvent(self, event):
         self.setStyleSheet("border: 1px solid black;")
         super().focusOutEvent(event)
-def make_insert_callback(n):
-    def callback():
-        print(f"[DEBUG] Button {n} clicked")
-        widget = self.focusWidget()
-        if isinstance(widget, SudokuCell):
-            print(f"[DEBUG] Focused cell: ({widget.row}, {widget.col})")
-            widget.setValue(n)
-        else:
-            print("[WARN] No SudokuCell focused!")
-    return callback
+        
 class SudokuApp(QWidget):
     def __init__(self):
         super().__init__()

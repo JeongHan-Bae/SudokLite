@@ -101,20 +101,13 @@ namespace sd {
 #endif
         }
 
-#if defined(_MSC_VER)
-#include <intrin.h>
-#pragma intrinsic(__popcnt16)
-#endif
-
         /**
          * @brief Return the number of bits set in a 16-bit integer.
          */
         inline uint8_t popcount16(const std::uint16_t x) {
 #if defined(__GNUC__) || defined(__clang__)
             return static_cast<uint8_t>(__builtin_popcount(x));
-#elif defined(_MSC_VER)
-        return static_cast<uint8_t>(__popcnt16(x));
-#else
+#else   // MSVC support removed to avoid fragile compilation
         uint8_t count = 0;
         uint16_t val = x;
         while (val) {
