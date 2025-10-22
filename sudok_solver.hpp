@@ -1,48 +1,82 @@
 /**
-* @file sudok_solver.hpp
- * @author JeongHan-Bae <mastropseudo@gmail.com>
+ * @file sudok_solver.hpp
+ * @author JeongHan-Bae
+ * @email &lt;mastropseudo&#64;gmail.com&gt;
  * @brief Efficient Backtracking Sudoku Solver Implementation
  *
- * @details
- * This file provides a high-performance Sudoku solver using iterative backtracking
- * with constraint propagation. The solver operates on a fixed-size stack and uses
- * bit-masking to efficiently manage candidate values for each cell.
+ * <h3>Description</h3>
+ * <p>
+ * This header defines a high-performance Sudoku solver based on an iterative
+ * backtracking algorithm combined with constraint propagation. The solver
+ * operates on a fixed-size stack and uses bit-masking to efficiently manage
+ * candidate values for each cell, providing both deterministic behavior and
+ * performance suitable for real-time or embedded systems.
+ * </p>
  *
- * ## Historical Background
- * The name "Sudok" (수독) is derived from the Joseonjok pronunciation of the Chinese word "Shudu" (数独).
- * Though popularized in Japan as "Sudoku", its history predates the 20th century:
+ * <h3>Algorithm Overview</h3>
+ * <ul>
+ *   <li>Iterative backtracking avoids deep recursion and reduces call overhead.</li>
+ *   <li>Bit-masked candidate representation enables constant-time constraint updates.</li>
+ *   <li>Local deduction propagates constraints across rows, columns, and boxes.</li>
+ *   <li>Optimized stack frames minimize memory allocation and improve cache locality.</li>
+ * </ul>
  *
- * - In the 18th century, Leonhard Euler worked on Latin squares.
- * - In 1612, Claude-Gaspard Bachet de Méziriac discussed 3x3 square puzzles.
- * - In China’s Song Dynasty (960–1279), the "九宫" (Nine Palace Grid) puzzle existed.
- * - A 3x3 grid with magic sum 15 was documented as early as the BeiZhou Dynasty (6th century).
+ * <h3>Historical Background</h3>
+ * <p>
+ * The name <b>"Sudok"</b> (수독) originates from the Joseonjok pronunciation of the Chinese
+ * word <b>"Shudu"</b> (数独). Although the puzzle is widely known in Japan as
+ * <b>"Sudoku"</b>, its historical roots predate the 20th century and extend across
+ * various mathematical traditions:
+ * </p>
  *
+ * <ul>
+ *   <li>In the 18th century, <b>Leonhard Euler</b> studied <i>Latin squares</i>,
+ *       a mathematical precursor to Sudoku.</li>
+ *   <li>In 1612, <b>Claude-Gaspard Bachet de Méziriac</b> discussed early
+ *       3×3 number placement puzzles.</li>
+ *   <li>During China’s <b>Song Dynasty</b> (960–1279), the <b>九宫</b> ("Nine Palace Grid")
+ *       puzzle appeared as an early variant of number placement problems.</li>
+ *   <li>A 3×3 grid with a magic constant of 15 was documented as early as the
+ *       <b>BeiZhou Dynasty</b> (6th century).</li>
+ * </ul>
  *
- * @note This file is intended to be directly included or compiled as part of your build.
+ * <h3>Implementation Notes</h3>
+ * <ul>
+ *   <li>This file is intended to be directly included or compiled as part of
+ *       a project build; it does not require separate linkage.</li>
+ *   <li>The implementation is fully self-contained and requires only the
+ *       C++20 standard library.</li>
+ * </ul>
  *
- * -----------------------------------------------------------------------------
- * MIT License
- *
+ * <h3>License</h3>
+ * <p>
+ * <b>MIT License</b><br/>
  * Copyright (c) 2025 JeongHan-Bae
+ * </p>
  *
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
+ * </p>
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * <p>
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ * </p>
  *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- * -----------------------------------------------------------------------------
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ * </p>
  */
 
 
@@ -55,25 +89,105 @@
 #include <memory>      // NOLINT for std::unique_ptr
 
 
+/**
+ * <h3>Header Dependency Detection</h3>
+ * <p>
+ * If the environment provides the <b>JH Toolkit</b> POD utilities through
+ * the aggregated header <code>&lt;jh/pod&gt;</code>, this solver integrates
+ * directly with them instead of defining its own fallback implementation.
+ * </p>
+ *
+ * <p><b>Integration requirements:</b></p>
+ * <ul>
+ *   <li>Language standard: C++20 or later (for <code>concept</code> support)</li>
+ *   <li>Availability of the header <code>&lt;jh/pod&gt;</code></li>
+ * </ul>
+ *
+ * <p>
+ * When available, <code>sd::array</code> and <code>sd::is_pod_like</code>
+ * are defined as aliases of <code>jh::pod::array</code> and
+ * <code>jh::pod::pod_like</code>.
+ * Otherwise, the solver falls back to a local lightweight implementation.
+ * </p>
+ */
+
+#ifndef SD_USE_JH_POD
+#  if __cplusplus >= 202002L && __has_include(<jh/pod>)
+#    define SD_USE_JH_POD 1
+#  else
+#    define SD_USE_JH_POD 0
+#  endif
+#endif
+
+
+#if SD_USE_JH_POD
+#include <jh/pod>
+
+namespace sd {
+    using jh::pod::pod_like;
+    using jh::pod::array;
+}
+#else
 namespace sd {
     namespace detail {
-        // =========================
-        //   POD TYPE OPTIMIZATION
-        // =========================
-
         /**
          * @brief Compile-time trait to check if a type is POD-like.
          */
         template<typename T>
         struct is_pod_like : std::integral_constant<
-                    bool,
-                    std::is_trivially_copyable<T>::value && // NOLINT for std::is_trivially_copyable_v
-                    std::is_trivially_constructible<T>::value && // NOLINT for std::is_trivially_constructible_v
-                    std::is_trivially_destructible<T>::value && // NOLINT for std::is_trivially_destructible_v
-                    std::is_standard_layout<T>::value // NOLINT for std::is_standard_layout_v
-                > {
+                bool,
+                std::is_trivially_copyable<T>::value && // NOLINT for std::is_trivially_copyable_v
+                std::is_trivially_constructible<T>::value && // NOLINT for std::is_trivially_constructible_v
+                std::is_trivially_destructible<T>::value && // NOLINT for std::is_trivially_destructible_v
+                std::is_standard_layout<T>::value // NOLINT for std::is_standard_layout_v
+        > {
         };
 
+        // =========================
+        //   FIXED ARRAY TEMPLATE
+        // =========================
+        template<typename T, std::uint16_t N, bool = detail::is_pod_like<T>::value>
+        struct array_impl;
+
+        template<typename T, std::uint16_t N>
+        struct alignas (alignof(T))
+
+        array_impl<T, N, true> final{
+                T data[N];
+
+                constexpr T &operator[](std::size_t i) noexcept { return data[i]; }
+                constexpr const T &operator[](std::size_t i) const noexcept { return data[i]; }
+
+                constexpr T *begin() noexcept { return data; }
+                [[nodiscard]] constexpr const T *begin() const noexcept { return data; }
+                constexpr T *end() noexcept { return data + N; }
+                [[nodiscard]] constexpr const T *end() const noexcept { return data + N; }
+
+                [[nodiscard]] static constexpr std::size_t size() noexcept { return N; }
+
+                bool operator==(const array_impl &other) const {
+                    return std::memcmp(data, other.data, sizeof(data)) == 0;
+                }
+
+                bool operator!=(const array_impl &other) const {
+                    return !(*this == other);
+                }
+        };
+
+        template<typename T, std::uint16_t N>
+        struct alignas (alignof(T))
+
+        array_impl<T, N, false> final{
+                static_assert(true, "POD-like type required");
+        };
+    }
+    template<typename T, std::uint16_t N>
+    using array = detail::array_impl<T, N>;
+}
+#endif
+
+namespace sd {
+    namespace detail {
         // =========================
         //   BIT OPERATIONS
         // =========================
@@ -95,9 +209,9 @@ namespace sd {
 #if HAS_BUILTIN_CTZ
             return static_cast<int8_t>(__builtin_ctz(x));
 #else
-        int8_t n = 0;
-        while (x >>= 1) ++n;
-        return n;
+            int8_t n = 0;
+            while (x >>= 1) ++n;
+            return n;
 #endif
         }
 
@@ -108,53 +222,16 @@ namespace sd {
 #if defined(__GNUC__) || defined(__clang__)
             return static_cast<uint8_t>(__builtin_popcount(x));
 #else   // MSVC support removed to avoid fragile compilation
-        uint8_t count = 0;
-        uint16_t val = x;
-        while (val) {
-            count += val & 1;
-            val >>= 1;
-        }
-        return count;
+            uint8_t count = 0;
+            uint16_t val = x;
+            while (val) {
+                count += val & 1;
+                val >>= 1;
+            }
+            return count;
 #endif
         }
     }
-
-    // =========================
-    //   FIXED ARRAY TEMPLATE
-    // =========================
-    template<typename T, std::uint16_t N, bool = detail::is_pod_like<T>::value>
-    struct array_impl;
-
-    template<typename T, std::uint16_t N>
-    struct alignas(alignof(T)) array_impl<T, N, true> final {
-        T data[N];
-
-        constexpr T &operator[](std::size_t i) noexcept { return data[i]; }
-        constexpr const T &operator[](std::size_t i) const noexcept { return data[i]; }
-
-        constexpr T *begin() noexcept { return data; }
-        [[nodiscard]] constexpr const T *begin() const noexcept { return data; }
-        constexpr T *end() noexcept { return data + N; }
-        [[nodiscard]] constexpr const T *end() const noexcept { return data + N; }
-
-        [[nodiscard]] static constexpr std::size_t size() noexcept { return N; }
-
-        bool operator==(const array_impl &other) const {
-            return std::memcmp(data, other.data, sizeof(data)) == 0;
-        }
-
-        bool operator!=(const array_impl &other) const {
-            return !(*this == other);
-        }
-    };
-
-    template<typename T, std::uint16_t N>
-    struct alignas(alignof(T)) array_impl<T, N, false> final {
-        static_assert(true, "POD-like type required");
-    };
-
-    template<typename T, std::uint16_t N>
-    using array = array_impl<T, N>;
 
     // =========================
     //   CELL STRUCTURE
@@ -201,33 +278,34 @@ namespace sd {
         array<SudokuCell, 81> cells;
 
         SudokuCell &at(const uint8_t r, const uint8_t c) { return cells[r * 9 + c]; }
+
         [[nodiscard]] const SudokuCell &at(const uint8_t r, const uint8_t c) const { return cells[r * 9 + c]; }
 
-        array<SudokuCell * const, 9> get_row(const uint8_t r) {
+        const array<SudokuCell *, 9> get_row(const uint8_t r) {
             return {
-                &at(r, 0), &at(r, 1), &at(r, 2), &at(r, 3), &at(r, 4),
-                &at(r, 5), &at(r, 6), &at(r, 7), &at(r, 8)
+                    &at(r, 0), &at(r, 1), &at(r, 2), &at(r, 3), &at(r, 4),
+                    &at(r, 5), &at(r, 6), &at(r, 7), &at(r, 8)
             };
         }
 
-        array<SudokuCell * const, 9> get_col(const uint8_t c) {
+        const array<SudokuCell *, 9> get_col(const uint8_t c) {
             return {
-                &at(0, c), &at(1, c), &at(2, c), &at(3, c), &at(4, c),
-                &at(5, c), &at(6, c), &at(7, c), &at(8, c)
+                    &at(0, c), &at(1, c), &at(2, c), &at(3, c), &at(4, c),
+                    &at(5, c), &at(6, c), &at(7, c), &at(8, c)
             };
         }
 
-        array<SudokuCell * const, 9> get_box(const uint8_t b) {
+        const array<SudokuCell *, 9> get_box(const uint8_t b) {
             const uint8_t sr = b / 3 * 3;
             const uint8_t sc = b % 3 * 3;
             return {
-                &at(sr, sc), &at(sr, sc + 1), &at(sr, sc + 2),
-                &at(sr + 1, sc), &at(sr + 1, sc + 1), &at(sr + 1, sc + 2),
-                &at(sr + 2, sc), &at(sr + 2, sc + 1), &at(sr + 2, sc + 2)
+                    &at(sr, sc), &at(sr, sc + 1), &at(sr, sc + 2),
+                    &at(sr + 1, sc), &at(sr + 1, sc + 1), &at(sr + 1, sc + 2),
+                    &at(sr + 2, sc), &at(sr + 2, sc + 1), &at(sr + 2, sc + 2)
             };
         }
 
-        static bool deduce_group(array<SudokuCell * const, 9> group) {
+        static bool deduce_group(const array<SudokuCell *, 9> group) {
             uint16_t confirmedMask = 0b1;
             bool changed = false;
             for (const auto *cell: group)
@@ -333,7 +411,7 @@ namespace sd {
             return true;
         }
 
-        static bool check_unit(const array<SudokuCell * const, 9> &group) {
+        static bool check_unit(const array<SudokuCell *, 9> &group) {
             uint16_t confirmed = 0b0;
             for (const auto *cell: group) {
                 if (cell->isConfirmed()) {
