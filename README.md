@@ -31,10 +31,10 @@ SudokLite compiles cleanly on **any C++14-capable compiler**,
 but automatically upgrades to use [`jh/pod`](https://github.com/JeongHan-Bae/JH-Toolkit/blob/main/docs/pods/overview.md)
 when built under **C++20** and the library is available in your system.
 
-| Environment        | Behavior                                                                                                                     |
-|--------------------|------------------------------------------------------------------------------------------------------------------------------|
-| **C++14**          | Uses the internal lightweight `sd::detail::array_impl<T, N>` implementation                                                  |
-| **C++20 + jh/pod** | Transparently maps `sd::detail::array_impl<T, N>` → `jh::pod::array<T, N>` for constexpr, alignment, and safety improvements |
+| Environment        | Behavior                                                                                                        |
+|--------------------|-----------------------------------------------------------------------------------------------------------------|
+| **C++14**          | Uses the internal lightweight `sd::detail::array_impl<T, N>` implementation                                     |
+| **C++20 + jh/pod** | Transparently maps `sd::array<T, N>` → `jh::pod::array<T, N>` for constexpr, alignment, and safety improvements |
 
 > This mapping avoids reimplementing POD logic while keeping binary and ABI compatibility stable across build targets.
 
@@ -47,7 +47,9 @@ when built under **C++20** and the library is available in your system.
   the solver automatically performs:
 
   ```cpp
-  using sd::detail::array_impl<T, N> = jh::pod::array<T, N>;
+  namespace sd{
+      using jh::pod::array;
+  }
   ```
 * This rebinds only the **internal POD layer**, ensuring:
 
