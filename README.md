@@ -185,7 +185,7 @@ python setup.py build_ext --inplace
 > * Optional: install the module system-wide:
 >
 >   ```bash
->   pip install ./bindings/python
+>   pip install ./bindings/python -v
 >   ```
 
 ---

@@ -57,7 +57,10 @@ message(STATUS "JH_LINK_LIBS=${LIBS}")
 
         try:
             result = subprocess.run(
-                ["cmake", "-S", tmp, "-B", os.path.join(tmp, "build")],
+                [
+                    "cmake", "-S", tmp, "-B", os.path.join(tmp, "build"),
+                    "-DCMAKE_PREFIX_PATH=/usr/local;/usr;/lib;/usr/lib;/usr/local/lib"
+                ],
                 capture_output=True, text=True, check=True,
             )
         except subprocess.CalledProcessError:
@@ -65,6 +68,7 @@ message(STATUS "JH_LINK_LIBS=${LIBS}")
 
         includes, libs, target = [], [], None
         for line in result.stdout.splitlines():
+            line = line.strip()
             if line.startswith("-- JH_TARGET="):
                 target = line.split("=", 1)[1].strip()
             elif line.startswith("-- JH_INCLUDE_DIRS="):
