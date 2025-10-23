@@ -86,14 +86,17 @@ message(STATUS "JH_LINK_LIBS=${LIBS}")
 # Step 2: Platform-specific logic
 # -----------------------------------------------------------------------------
 if is_msvc:
+    # Force UTF-8 encoding for stdout/stderr to avoid UnicodeEncodeError on Windows
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     # Windows uses MSVC — skip jh-toolkit detection
-    print("ℹ️  MSVC detected — skipping jh-toolkit detection (use internal POD)")
+    print("\u2139\ufe0f  MSVC detected \u2014 skipping jh-toolkit detection (use internal POD)")
     extra_compile_args = ["/std:c++20", "/DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION"]
 else:
     # Try to detect jh-toolkit on UNIX-like systems
     jh = cmake_find_jh_toolkit()
     if jh:
-        print(f"✅ Found {jh['target']}")
+        print(f"\u2705 Found {jh['target']}")
         for inc in jh["include_dirs"]:
             if inc and os.path.exists(inc):
                 include_dirs.append(inc)
@@ -102,7 +105,7 @@ else:
                 extra_link_args.append(lib)
         extra_compile_args += ["-std=c++20", "-DSD_USE_JH_POD=1"]
     else:
-        print("⚠️  jh-toolkit not found — using internal POD fallback")
+        print("\u26a0\ufe0f  jh-toolkit not found \u2014 using internal POD fallback")
         extra_compile_args += ["-std=c++17"]
     extra_compile_args.append("-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION")
 
